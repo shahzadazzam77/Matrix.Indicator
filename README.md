@@ -7,11 +7,13 @@
 The Matrix Indicator is a multi-purpose TradingView Pine Script tool designed to help traders identify trend direction, buy/sell signals, and trendline breakouts on price charts. It is suitable for both discretionary and algorithmic trading strategies.
 
 
+
 ### Main Features
 
 - **Buy/Sell Signals**: Uses an ATR-based trailing stop and optionally Heikin Ashi candles to generate buy and sell signals. These are visually marked on the chart and can trigger TradingView alerts.
 - **Trendline Detection and Breakouts**: Automatically draws dynamic trendlines based on swing highs and lows, with slope calculated using ATR, standard deviation, or linear regression. Highlights breakout points when price crosses these trendlines.
 - **Order Blocks (Bullish & Bearish)**: Highlights bullish and bearish order blocks on the chart. Bullish order blocks are shown in green, bearish in red, helping to identify potential support and resistance zones.
+- **Fair Value Gaps (FVG)**: Detects and highlights all fair value gaps (gaps between candles) on the chart. Gaps are removed/filled visually when price returns to the gap area, aiding in gap trading strategies.
 
 ### Technical Concepts Used
 

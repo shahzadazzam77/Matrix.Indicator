@@ -142,3 +142,31 @@ if not na(ob3_bear_low) and not na(ob3_bear_high)
     if not na(bear_box3)
         box.delete(bear_box3)
     bear_box3 := box.new(bar_index-2, ob3_bear_high, bar_index, ob3_bear_low, border_color=color.new(color.red, 0), bgcolor=color.new(color.red, 85))
+
+
+//─────────────────────────────────────────────
+// SECTION 4 — Fair Value Gap (FVG)
+//─────────────────────────────────────────────
+
+// ---- Inputs for customization ----
+bullishColor = input.color(color.new(color.green, 70), "Bullish FVG Color")
+bearishColor = input.color(color.new(color.red, 70), "Bearish FVG Color")
+extendLines  = input.bool(true, "Extend FVG Lines?")
+showLabels   = input.bool(false, "Show FVG Labels?")
+
+// ---- FVG Detection Logic ----
+bullishFVG = low[0] > high[2] and close[1] < close[0] and close[2] > close[1]
+bearishFVG = high[0] < low[2] and close[1] > close[0] and close[2] < close[1]
+
+// ---- Function to draw FVG and optional label ----
+f_drawFVG(isBullish, topPrice, bottomPrice, labelPrice, boxColor, labelText, labelStyle) =>
+    box.new(bar_index[2], topPrice, bar_index, bottomPrice, border_color=boxColor, border_style=line.style_solid, bgcolor=boxColor, extend=extendLines ? extend.right : extend.none)
+    if showLabels
+        label.new(bar_index, labelPrice, labelText, xloc=xloc.bar_index, yloc=yloc.price, style=labelStyle, color=boxColor, textcolor=color.white, size=size.small)
+
+// ---- Plotting FVGs ----
+if bullishFVG
+    f_drawFVG(true, high[2], low[0], low[0], bullishColor, "Bullish FVG", label.style_label_up)
+
+if bearishFVG
+    f_drawFVG(false, low[2], high[0], high[0], bearishColor, "Bearish FVG", label.style_label_down)
