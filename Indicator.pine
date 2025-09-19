@@ -105,3 +105,40 @@ plotshape(dnos > dnos[1] ? high : na, "Lower Break",  shape.labeldown, location.
 
 alertcondition(upos > upos[1], "Upward Breakout",   "Price broke the down-trendline upward")
 alertcondition(dnos > dnos[1], "Downward Breakout", "Price broke the up-trendline downward")
+
+
+
+//─────────────────────────────────────────────
+// SECTION 3 — Order Blocks (Bullish & Bearish)
+//─────────────────────────────────────────────
+// Bullish Order Block: Last bearish candle before a bullish move (close > open after a down candle)
+// Bearish Order Block: Last bullish candle before a bearish move (close < open after an up candle)
+
+var float ob3_bull_low = na
+var float ob3_bull_high = na
+var float ob3_bear_low = na
+var float ob3_bear_high = na
+
+// Detect bullish order block (down candle followed by up candle)
+is_bull_ob3 = close[2] < open[2] and close[1] > open[1]
+ob3_bull_low := is_bull_ob3 ? low[2] : ob3_bull_low[1]
+ob3_bull_high := is_bull_ob3 ? high[2] : ob3_bull_high[1]
+
+// Detect bearish order block (up candle followed by down candle)
+is_bear_ob3 = close[2] > open[2] and close[1] < open[1]
+ob3_bear_low := is_bear_ob3 ? low[2] : ob3_bear_low[1]
+ob3_bear_high := is_bear_ob3 ? high[2] : ob3_bear_high[1]
+
+// Draw bullish order block (green box)
+var box bull_box3 = na
+if not na(ob3_bull_low) and not na(ob3_bull_high)
+    if not na(bull_box3)
+        box.delete(bull_box3)
+    bull_box3 := box.new(bar_index-2, ob3_bull_high, bar_index, ob3_bull_low, border_color=color.new(color.green, 0), bgcolor=color.new(color.green, 85))
+
+// Draw bearish order block (red box)
+var box bear_box3 = na
+if not na(ob3_bear_low) and not na(ob3_bear_high)
+    if not na(bear_box3)
+        box.delete(bear_box3)
+    bear_box3 := box.new(bar_index-2, ob3_bear_high, bar_index, ob3_bear_low, border_color=color.new(color.red, 0), bgcolor=color.new(color.red, 85))
