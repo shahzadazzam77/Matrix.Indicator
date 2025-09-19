@@ -1,0 +1,107 @@
+//@version=5
+indicator("Matrix Indicator", overlay = true)
+
+//─────────────────────────────────────────────
+// SECTION 1 — Buy/Sell Bot Alerts  
+//─────────────────────────────────────────────
+a = input.float(1,    title = "UT Key Value (sensitivity)")
+c = input.int(10,     title = "UT ATR Period")
+h = input.bool(false, title = "UT Signals from Heikin Ashi Candles")
+
+xATR  = ta.atr(c)
+nLoss = a * xATR
+
+srcUT = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close, lookahead = barmerge.lookahead_off) : close
+
+
+var float xATRTrailingStop = na
+xATRTrailingStop := if srcUT > nz(xATRTrailingStop[1]) and srcUT[1] > nz(xATRTrailingStop[1])
+    math.max(nz(xATRTrailingStop[1]), srcUT - nLoss)
+else if srcUT < nz(xATRTrailingStop[1]) and srcUT[1] < nz(xATRTrailingStop[1])
+    math.min(nz(xATRTrailingStop[1]), srcUT + nLoss)
+else
+    srcUT > nz(xATRTrailingStop[1]) ? srcUT - nLoss : srcUT + nLoss
+
+var int pos = 0
+pos := if srcUT[1] < nz(xATRTrailingStop[1]) and srcUT > nz(xATRTrailingStop[1])
+    1
+else if srcUT[1] > nz(xATRTrailingStop[1]) and srcUT < nz(xATRTrailingStop[1])
+    -1
+else
+    nz(pos[1])
+
+ema1   = ta.ema(srcUT,1)
+above  = ta.crossover(ema1, xATRTrailingStop)
+below  = ta.crossover(xATRTrailingStop, ema1)
+
+buy  = srcUT > xATRTrailingStop and above
+sell = srcUT < xATRTrailingStop and below
+
+barbuy  = srcUT > xATRTrailingStop
+barsell = srcUT < xATRTrailingStop
+
+plotshape(buy ,  title = "UT Buy",  text = "Buy",  style = shape.labelup,   location = location.belowbar, color = color.green, textcolor = color.white, size = size.tiny)
+plotshape(sell,  title = "UT Sell", text = "Sell", style = shape.labeldown, location = location.abovebar, color = color.red,   textcolor = color.white, size = size.tiny)
+
+barcolor(barbuy  ? color.new(color.green,0) : na)
+barcolor(barsell ? color.new(color.red,0)   : na)
+
+alertcondition(buy ,  "UT Long" ,  "UT Long")
+alertcondition(sell,  "UT Short",  "UT Short")
+
+//─────────────────────────────────────────────
+// SECTION 2 — Trendlines with Breaks  (original v5 logic)
+//─────────────────────────────────────────────
+length      = input.int(14, "Swing Detection Lookback")
+mult        = input.float(1., "Slope", minval = 0, step = .1)
+calcMethod  = input.string("Atr", "Slope Calculation Method", options = ["Atr","Stdev","Linreg"])
+backpaint   = input.bool(true, tooltip = "Backpainting offset displayed elements in the past. Disable to see real time info.")
+upCss       = input.color(color.teal, "Up Trendline Color", group = "Style")
+dnCss       = input.color(color.red,  "Down Trendline Color", group = "Style")
+showExt     = input.bool(true, "Show Extended Lines")
+
+var float upper = na
+var float lower = na
+var float slope_ph = na
+var float slope_pl = na
+offset = backpaint ? length : 0
+n = bar_index
+src = close
+
+ph = ta.pivothigh(length, length)
+pl = ta.pivotlow(length, length)
+
+slope = switch calcMethod
+    "Atr"    => ta.atr(length) / length * mult
+    "Stdev"  => ta.stdev(src,length) / length * mult
+    "Linreg" => math.abs(ta.sma(src * n, length) - ta.sma(src, length) * ta.sma(n, length)) / ta.variance(n, length) / 2 * mult
+
+slope_ph := ph ? slope : slope_ph
+slope_pl := pl ? slope : slope_pl
+upper    := ph ? ph : upper - slope_ph
+lower    := pl ? pl : lower + slope_pl
+
+var int upos = 0
+var int dnos = 0
+upos := ph ? 0 : close > upper - slope_ph * length ? 1 : upos
+dnos := pl ? 0 : close < lower + slope_pl * length ? 1 : dnos
+
+var line uptl = line.new(na,na,na,na, color = upCss, style = line.style_dashed, extend = extend.right)
+var line dntl = line.new(na,na,na,na, color = dnCss, style = line.style_dashed, extend = extend.right)
+
+if ph and showExt
+    line.set_xy1(uptl, n-offset, backpaint ? ph : upper - slope_ph * length)
+    line.set_xy2(uptl, n-offset+1, backpaint ? ph - slope : upper - slope_ph * (length+1))
+
+if pl and showExt
+    line.set_xy1(dntl, n-offset, backpaint ? pl : lower + slope_pl * length)
+    line.set_xy2(dntl, n-offset+1, backpaint ? pl + slope : lower + slope_pl * (length+1))
+
+plot(backpaint ? upper : upper - slope_ph * length, "Upper", color = ph ? na : upCss, offset = -offset)
+plot(backpaint ? lower : lower + slope_pl * length, "Lower", color = pl ? na : dnCss, offset = -offset)
+
+plotshape(upos > upos[1] ? low  : na, "Upper Break",  shape.labelup,   location.absolute, upCss, text="B", textcolor=color.white, size = size.tiny)
+plotshape(dnos > dnos[1] ? high : na, "Lower Break",  shape.labeldown, location.absolute, dnCss, text="B", textcolor=color.white, size = size.tiny)
+
+alertcondition(upos > upos[1], "Upward Breakout",   "Price broke the down-trendline upward")
+alertcondition(dnos > dnos[1], "Downward Breakout", "Price broke the up-trendline downward")
