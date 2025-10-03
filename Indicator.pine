@@ -1,53 +1,7 @@
 //@version=5
 indicator("Matrix Indicator", overlay = true)
 
-//─────────────────────────────────────────────
-// SECTION 1 — Buy/Sell Bot Alerts  
-//─────────────────────────────────────────────
-a = input.float(1,    title = "UT Key Value (sensitivity)")
-c = input.int(10,     title = "UT ATR Period")
-h = input.bool(false, title = "UT Signals from Heikin Ashi Candles")
 
-xATR  = ta.atr(c)
-nLoss = a * xATR
-
-srcUT = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close, lookahead = barmerge.lookahead_off) : close
-
-
-var float xATRTrailingStop = na
-xATRTrailingStop := if srcUT > nz(xATRTrailingStop[1]) and srcUT[1] > nz(xATRTrailingStop[1])
-    math.max(nz(xATRTrailingStop[1]), srcUT - nLoss)
-else if srcUT < nz(xATRTrailingStop[1]) and srcUT[1] < nz(xATRTrailingStop[1])
-    math.min(nz(xATRTrailingStop[1]), srcUT + nLoss)
-else
-    srcUT > nz(xATRTrailingStop[1]) ? srcUT - nLoss : srcUT + nLoss
-
-var int pos = 0
-pos := if srcUT[1] < nz(xATRTrailingStop[1]) and srcUT > nz(xATRTrailingStop[1])
-    1
-else if srcUT[1] > nz(xATRTrailingStop[1]) and srcUT < nz(xATRTrailingStop[1])
-    -1
-else
-    nz(pos[1])
-
-ema1   = ta.ema(srcUT,1)
-above  = ta.crossover(ema1, xATRTrailingStop)
-below  = ta.crossover(xATRTrailingStop, ema1)
-
-buy  = srcUT > xATRTrailingStop and above
-sell = srcUT < xATRTrailingStop and below
-
-barbuy  = srcUT > xATRTrailingStop
-barsell = srcUT < xATRTrailingStop
-
-plotshape(buy ,  title = "UT Buy",  text = "Buy",  style = shape.labelup,   location = location.belowbar, color = color.green, textcolor = color.white, size = size.tiny)
-plotshape(sell,  title = "UT Sell", text = "Sell", style = shape.labeldown, location = location.abovebar, color = color.red,   textcolor = color.white, size = size.tiny)
-
-barcolor(barbuy  ? color.new(color.green,0) : na)
-barcolor(barsell ? color.new(color.red,0)   : na)
-
-alertcondition(buy ,  "UT Long" ,  "UT Long")
-alertcondition(sell,  "UT Short",  "UT Short")
 
 //─────────────────────────────────────────────
 // SECTION 2 — Trendlines with Breaks  (original v5 logic)
@@ -474,3 +428,109 @@ lineId18 = processLevel(show_3_618, value_3_618, color_3_618, lineId17)
 lineId19 = processLevel(show_3_65, value_3_65, color_3_65, lineId18)
 lineId20 = processLevel(show_4_236, value_4_236, color_4_236, lineId19)
 lineId21 = processLevel(show_4_618, value_4_618, color_4_618, lineId20)
+
+
+
+//─────────────────────────────────────────────
+// SECTION 6 — Triple EMA
+//─────────────────────────────────────────────
+
+//@version=5
+//indicator("Triple EMA", shorttitle="TEMA", overlay=true)
+
+// checkboxes for optional MAs
+aema = input.bool(true,  title="Enable 2nd MA")
+b = input.bool(true,  title="Enable 3rd MA")
+
+// integer inputs with min values
+len  = input.int(9,  minval=1, title="Length 1")
+len2 = input.int(21, minval=1, title="Length 2")
+len3 = input.int(50, minval=1, title="Length 3")
+
+// source inputs
+src1  = input.source(close, title="Source 1")
+src2 = input.source(close, title="Source 2")
+src3 = input.source(close, title="Source 3")
+
+// calculations
+out  = ta.ema(src1,  len)
+out2 = ta.ema(src2, len2)
+out3 = ta.ema(src3, len3)
+
+// plots
+plot(out,                 title="EMA 1", color=color.green, linewidth=2)
+plot(aema ? out2 : na,       title="EMA 2", color=color.blue, linewidth=2)
+plot(b ? out3 : na,       title="EMA 3", color=color.red, linewidth=2)
+
+
+// === PRE-MARKET LEVELS ===
+// === INPUTS ===
+sessionTime = input.session("0400-0930", "Pre-Market Session")   // US equities pre-market
+
+// === VARIABLES ===
+var float preHigh = na
+var float preLow  = na
+
+// Track premarket session
+inSession = time(timeframe.period, sessionTime)
+
+// Capture high/low during pre-market
+if inSession
+    preHigh := na(preHigh) ? high : math.max(preHigh, high)
+    preLow  := na(preLow)  ? low  : math.min(preLow, low)
+
+// Reset at new day
+newDay = ta.change(time("D"))
+if newDay
+    preHigh := na
+    preLow  := na
+
+// === PLOTTING ===
+// Pre-market levels
+plot(preHigh, "Pre Mkt High", color=color.purple, linewidth=2, style=plot.style_linebr)
+plot(preLow,  "Pre Mkt Low",  color=color.red, linewidth=2, style=plot.style_linebr)
+
+// Gamma territories background shading
+bgcolor(not na(preHigh) and close > preHigh ? color.new(color.green, 85) : na, title="Bullish Gamma")
+bgcolor(not na(preLow) and close < preLow   ? color.new(color.red, 85)   : na, title="Bearish Gamma")
+
+// Labels on last bar
+if barstate.islast
+    if not na(preHigh)
+        label.new(bar_index, preHigh, "Pre mkt high\nBULLISH GAMMA TERRITORY",             color=color.purple, textcolor=color.white, style=label.style_label_down, yloc=yloc.price)
+    if not na(preLow)
+        label.new(bar_index, preLow, "Pre mkt low\nBEARISH GAMMA TERRITORY",             color=color.red, textcolor=color.white, style=label.style_label_up, yloc=yloc.price)
+
+
+
+
+
+// === Detect Candlestick Patterns ===
+
+// Hammer (long lower wick, small body)
+isHammer = close > open and (open - low) / (high - low) > 0.6
+
+// Inverted Hammer (long upper wick, small body)
+isInvHammer = close > open and (high - close) / (high - low) > 0.6
+
+// Bullish Engulfing
+isBullEngulf = close[1] < open[1] and close > open and close > open[1] and open < close[1]
+
+// Bearish Engulfing
+isBearEngulf = close[1] > open[1] and close < open and close < open[1] and open > close[1]
+
+// Morning Star (simplified: down candle, small body, strong up candle)
+isMorningStar = close[2] < open[2] and math.abs(close[1] - open[1]) < (high[1]-low[1])*0.3 and close > (open[2] + close[2]) / 2
+
+// Evening Star (simplified: up candle, small body, strong down candle)
+isEveningStar = close[2] > open[2] and math.abs(close[1] - open[1]) < (high[1]-low[1])*0.3 and close < (open[2] + close[2]) / 2
+
+// === Plot Signals ===
+plotshape(isHammer, title="Hammer", location=location.belowbar, color=color.green, style=shape.labelup, text="Ham", textcolor=color.black)
+plotshape(isInvHammer, title="Inv Hammer", location=location.abovebar, color=color.red, style=shape.labeldown, text="InvH", textcolor=color.black)
+plotshape(isBullEngulf, title="Bull Engulf", location=location.belowbar, color=color.green, style=shape.labelup, text="Bull", textcolor=color.black)
+plotshape(isBearEngulf, title="Bear Engulf", location=location.abovebar, color=color.red, style=shape.labeldown, text="Bear"), textcolor=color.black
+plotshape(isMorningStar, title="Morning Star", location=location.belowbar, color=color.green, style=shape.labelup, text="Mor", textcolor=color.black)
+plotshape(isEveningStar, title="Evening Star", location=location.abovebar, color=color.red, style=shape.labeldown, text="Eve", textcolor=color.black)
+
+
