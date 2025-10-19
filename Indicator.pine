@@ -888,8 +888,8 @@ else if extendRightInput
     extendStyle := extend.right
 
 group3 = "Color Settings"
-colorUpper = input.color(color.new(color.green, 85), "", group = group3, inline = "c1")
-colorLower = input.color(color.new(color.white,  85), "", group = group3, inline = "c2")
+colorUpper = input.color(color.new(color.black, 100), "", group = group3, inline = "c1")
+colorLower = input.color(color.new(color.white,  90), "", group = group3, inline = "c2")
 
 calcSlope(source, length) =>
     max_bars_back(source, 5000)
@@ -917,7 +917,7 @@ startPrice = i + s * (lengthInput - 1)
 endPrice2 = i
 var line baseLine = na
 if na(baseLine) and not na(startPrice)
-    baseLine := line.new(bar_index - lengthInput + 1, startPrice, bar_index, endPrice2, width=1, extend=extendStyle, color=color.new(colorLower, 0))
+    baseLine := line.new(bar_index - lengthInput + 1, startPrice, bar_index, endPrice2, width=2, extend=extendStyle, color=color.new(colorLower, 0))
 else
     line.set_xy1(baseLine, bar_index - lengthInput + 1, startPrice)
     line.set_xy2(baseLine, bar_index, endPrice2)
@@ -960,13 +960,13 @@ lowerStartPrice = startPrice + (useLowerDevInput ? -lowerMultInput * stdDev : -d
 lowerEndPrice = endPrice2 + (useLowerDevInput ? -lowerMultInput * stdDev : -dnDev)
 var line lower2 = na
 if na(upper2) and not na(upperStartPrice)
-    upper2 := line.new(bar_index - lengthInput + 1, upperStartPrice, bar_index, upperEndPrice, width=1, extend=extendStyle, color=color.new(colorUpper, 0))
+    upper2 := line.new(bar_index - lengthInput + 1, upperStartPrice, bar_index, upperEndPrice, width=2, extend=extendStyle, color=color.new(colorUpper, 0))
 else
     line.set_xy1(upper2, bar_index - lengthInput + 1, upperStartPrice)
     line.set_xy2(upper2, bar_index, upperEndPrice)
 
 if na(lower2) and not na(lowerStartPrice)
-    lower2 := line.new(bar_index - lengthInput + 1, lowerStartPrice, bar_index, lowerEndPrice, width=1, extend=extendStyle, color=color.new(colorUpper, 0))
+    lower2 := line.new(bar_index - lengthInput + 1, lowerStartPrice, bar_index, lowerEndPrice, width=2, extend=extendStyle, color=color.new(colorUpper, 0))
 else
     line.set_xy1(lower2, bar_index - lengthInput + 1, lowerStartPrice)
     line.set_xy2(lower2, bar_index, lowerEndPrice)
@@ -1092,6 +1092,15 @@ plotshape(buySignal, title="Buy Signal", text='Buy', style=shape.labelup,
 plotshape(sellSignal, title="Sell Signal", text='Sell', style=shape.labeldown, 
      location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.tiny)
 
+// Plot Trend Context Start Shapes (SMA 200 Crossovers)
+// FIXED: Swapped locations for clearer visual representation and updated BEARISH text color for contrast.
+// plotshape(bullishCrossover, title="Bullish Trend Start", text='BULLISH', style=shape.labelup, 
+//      location=location.abovebar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+     
+// plotshape(bearishCrossover, title="Bearish Trend Start", text='BEARISH', style=shape.labeldown, 
+//      location=location.belowbar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+
 // --- 5. ALERTS ---
 alertcondition(buySignal, "EMA Long Signal", "EMA 9 crossed EMA 21 to the upside.")
 alertcondition(sellSignal, "EMA Short Signal", "EMA 9 crossed EMA 21 to the downside.")
+
