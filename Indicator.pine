@@ -993,11 +993,6 @@ if showPearsonInput and not na(pearsonR)
 // SECTION 6 — Quadruple MA Setup
 //─────────────────────────────────────────────
 
-// The strategy logic remains based on the fast EMA (9) and slow EMA (21) crossover.
-// The SMAs (50 and 200) are added purely for visual context.
-// strategy(title="Custom EMA/SMA Crossover Strategy", overlay=true, 
-//      // Set trade details for backtesting
-//      default_qty_type=strategy.percent_of_equity, default_qty_value=100)
 
 
 // --- 1. INPUTS ---
@@ -1086,21 +1081,60 @@ plot(sma50_enable ? sma3 : na, title="SMA 50", color=color_sma50, linewidth=2)
 plot(sma200_enable ? sma4 : na, title="SMA 200", color=color_sma200, linewidth=2) 
 
 // Plot Crossover Shapes (EMA Signals)
-plotshape(buySignal, title="Buy Signal", text='Buy', style=shape.labelup, 
-     location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.tiny)
+plotshape(buySignal, style=shape.triangleup, text = "Buy",
+     location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
      
-plotshape(sellSignal, title="Sell Signal", text='Sell', style=shape.labeldown, 
-     location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.tiny)
-
-// Plot Trend Context Start Shapes (SMA 200 Crossovers)
-// FIXED: Swapped locations for clearer visual representation and updated BEARISH text color for contrast.
-// plotshape(bullishCrossover, title="Bullish Trend Start", text='BULLISH', style=shape.labelup, 
-//      location=location.abovebar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(sellSignal, style=shape.triangledown, 
+     location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
      
-// plotshape(bearishCrossover, title="Bearish Trend Start", text='BEARISH', style=shape.labeldown, 
-//      location=location.belowbar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
 
-// --- 5. ALERTS ---
-alertcondition(buySignal, "EMA Long Signal", "EMA 9 crossed EMA 21 to the upside.")
-alertcondition(sellSignal, "EMA Short Signal", "EMA 9 crossed EMA 21 to the downside.")
 
+
+
+//─────────────────────────────────────────────
+// SECTION 7 — Buy/Sell Bot Alerts  
+//─────────────────────────────────────────────
+au = input.float(1,    title = "Key Value (sensitivity)")
+c = input.int(10,     title = "ATR Period")
+h = input.bool(false, title = "Signals from Heikin Ashi Candles")
+
+xATR  = ta.atr(c)
+nLoss = au * xATR
+
+srcUT = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close, lookahead = barmerge.lookahead_off) : close
+
+
+var float xATRTrailingStop = na
+xATRTrailingStop := if srcUT > nz(xATRTrailingStop[1]) and srcUT[1] > nz(xATRTrailingStop[1])
+    math.max(nz(xATRTrailingStop[1]), srcUT - nLoss)
+else if srcUT < nz(xATRTrailingStop[1]) and srcUT[1] < nz(xATRTrailingStop[1])
+    math.min(nz(xATRTrailingStop[1]), srcUT + nLoss)
+else
+    srcUT > nz(xATRTrailingStop[1]) ? srcUT - nLoss : srcUT + nLoss
+
+var int pos = 0
+pos := if srcUT[1] < nz(xATRTrailingStop[1]) and srcUT > nz(xATRTrailingStop[1])
+    1
+else if srcUT[1] > nz(xATRTrailingStop[1]) and srcUT < nz(xATRTrailingStop[1])
+    -1
+else
+    nz(pos[1])
+
+ema1UT   = ta.ema(srcUT,1)
+above  = ta.crossover(ema1UT, xATRTrailingStop)
+below  = ta.crossover(xATRTrailingStop, ema1UT)
+
+buy  = srcUT > xATRTrailingStop and above
+sell = srcUT < xATRTrailingStop and below
+
+barbuy  = srcUT > xATRTrailingStop
+barsell = srcUT < xATRTrailingStop
+
+plotshape(buy ,  title = "UT Buy",  text = "Buy",  style = shape.labelup,   location = location.belowbar, color = color.green, textcolor = color.white, size = size.tiny)
+plotshape(sell,  title = "UT Sell", text = "Sell", style = shape.labeldown, location = location.abovebar, color = color.red,   textcolor = color.white, size = size.tiny)
+
+barcolor(barbuy  ? color.new(color.green,0) : na)
+barcolor(barsell ? color.new(color.red,0)   : na)
+
+alertcondition(buy ,  "UT Long" ,  "UT Long")
+alertcondition(sell,  "UT Short",  "UT Short")
