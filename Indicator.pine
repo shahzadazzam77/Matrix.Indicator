@@ -854,12 +854,6 @@ alertcondition(currentAlerts.bearishFairValueGap,       'Bearish FVG',          
 //---------------------------------------------------------------------------------------------------------------------}
 
 
-
-
-
-
-
-
 //─────────────────────────────────────────────
 // SECTION 7 — Linear Regression
 //─────────────────────────────────────────────
@@ -888,8 +882,8 @@ else if extendRightInput
     extendStyle := extend.right
 
 group3 = "Color Settings"
-colorUpper = input.color(color.new(color.black, 100), "", group = group3, inline = "c1")
-colorLower = input.color(color.new(color.white,  90), "", group = group3, inline = "c2")
+colorUpper = input.color(color.new(color.black, 90), "", group = group3, inline = "c1")
+colorLower = input.color(color.new(color.black,  90), "", group = group3, inline = "c2")
 
 calcSlope(source, length) =>
     max_bars_back(source, 5000)
@@ -916,11 +910,11 @@ calcSlope(source, length) =>
 startPrice = i + s * (lengthInput - 1)
 endPrice2 = i
 var line baseLine = na
-if na(baseLine) and not na(startPrice)
-    baseLine := line.new(bar_index - lengthInput + 1, startPrice, bar_index, endPrice2, width=2, extend=extendStyle, color=color.new(colorLower, 0))
-else
-    line.set_xy1(baseLine, bar_index - lengthInput + 1, startPrice)
-    line.set_xy2(baseLine, bar_index, endPrice2)
+// if na(baseLine) and not na(startPrice)
+//     baseLine := line.new(bar_index - lengthInput + 1, startPrice, bar_index, endPrice2, width=1, extend=extendStyle, color=color.new(colorLower, 0))
+// else
+//     line.set_xy1(baseLine, bar_index - lengthInput + 1, startPrice)
+//     line.set_xy2(baseLine, bar_index, endPrice2)
 
 calcDev(source, length, slope2, average, intercept) =>
     upDev = 0.0
@@ -971,8 +965,8 @@ else
     line.set_xy1(lower2, bar_index - lengthInput + 1, lowerStartPrice)
     line.set_xy2(lower2, bar_index, lowerEndPrice)
 
-linefill.new(upper2, baseLine, color = colorUpper)
-linefill.new(baseLine, lower2, color = colorLower)
+// linefill.new(upper2, baseLine, color = colorUpper)
+// linefill.new(baseLine, lower2, color = colorLower)
 
 float trend = math.sign(startPrice - endPrice2)
 alertcondition(sourceInput > line.get_price(upper2, bar_index) or sourceInput < line.get_price(lower2, bar_index), title='Regression Channel Exited', message="The price movement has exited Regression Channel's bounds")
@@ -992,6 +986,8 @@ if showPearsonInput and not na(pearsonR)
 //─────────────────────────────────────────────
 // SECTION 6 — Quadruple MA Setup
 //─────────────────────────────────────────────
+
+
 
 
 
@@ -1081,27 +1077,27 @@ plot(sma50_enable ? sma3 : na, title="SMA 50", color=color_sma50, linewidth=2)
 plot(sma200_enable ? sma4 : na, title="SMA 200", color=color_sma200, linewidth=2) 
 
 // Plot Crossover Shapes (EMA Signals)
-plotshape(buySignal, style=shape.triangleup, text = "Buy",
+plotshape(buySignal, style=shape.labelup, location=location.belowbar, text = "BUY",
      location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
      
-plotshape(sellSignal, style=shape.triangledown, 
+plotshape(sellSignal, style=shape.labeldown, location=location.abovebar, text = "SELL",
      location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
      
-
-
+alertcondition(buySignal ,  "EMA Long" ,  "EMA Long")
+alertcondition(sellSignal,  "EMA Short",  "EMA Short")
 
 
 //─────────────────────────────────────────────
 // SECTION 7 — Buy/Sell Bot Alerts  
 //─────────────────────────────────────────────
 au = input.float(1,    title = "Key Value (sensitivity)")
-c = input.int(10,     title = "ATR Period")
-h = input.bool(false, title = "Signals from Heikin Ashi Candles")
+cu = input.int(10,     title = "ATR Period")
+hu = input.bool(false, title = "Signals from Heikin Ashi Candles")
 
-xATR  = ta.atr(c)
+xATR  = ta.atr(cu)
 nLoss = au * xATR
 
-srcUT = h ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close, lookahead = barmerge.lookahead_off) : close
+srcUT = hu ? request.security(ticker.heikinashi(syminfo.tickerid), timeframe.period, close, lookahead = barmerge.lookahead_off) : close
 
 
 var float xATRTrailingStop = na
@@ -1130,8 +1126,8 @@ sell = srcUT < xATRTrailingStop and below
 barbuy  = srcUT > xATRTrailingStop
 barsell = srcUT < xATRTrailingStop
 
-plotshape(buy ,  title = "UT Buy",  text = "Buy",  style = shape.labelup,   location = location.belowbar, color = color.green, textcolor = color.white, size = size.tiny)
-plotshape(sell,  title = "UT Sell", text = "Sell", style = shape.labeldown, location = location.abovebar, color = color.red,   textcolor = color.white, size = size.tiny)
+plotshape(buy ,  title = "UT Buy",   style = shape.triangleup,   location = location.belowbar, color = color.orange, textcolor = color.white, size = size.small)
+plotshape(sell,  title = "UT Sell",  style = shape.triangledown, location = location.abovebar, color = color.red,   textcolor = color.white, size = size.small)
 
 barcolor(barbuy  ? color.new(color.green,0) : na)
 barcolor(barsell ? color.new(color.red,0)   : na)
