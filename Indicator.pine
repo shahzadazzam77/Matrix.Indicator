@@ -1134,3 +1134,8 @@ barcolor(barsell ? color.new(color.red,0)   : na)
 
 alertcondition(buy ,  "UT Long" ,  "UT Long")
 alertcondition(sell,  "UT Short",  "UT Short")
+
+
+
+
+///////
